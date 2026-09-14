@@ -1,6 +1,6 @@
 /* Bàn chơi giấy — service worker
    Đổi VERSION mỗi lần cập nhật nội dung để người chơi nhận bản mới. */
-var VERSION = "v1";
+var VERSION = "v2";
 var CACHE = "ban-choi-" + VERSION;
 var CORE = [
   "./",
