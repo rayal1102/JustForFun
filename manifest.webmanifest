@@ -1,0 +1,16 @@
+{
+  "name": "Bàn chơi giấy — Cờ caro & 2048",
+  "short_name": "Bàn chơi giấy",
+  "description": "Cờ caro đấu với máy và 2048 nhiều cỡ bàn, chơi ngay trên trình duyệt.",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#22343a",
+  "theme_color": "#22343a",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

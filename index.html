@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bàn chơi giấy — Cờ caro &amp; 2048</title>
+<meta name="description" content="Cờ caro đấu với máy và 2048 nhiều cỡ bàn, chơi ngay trên trình duyệt, có bảng điểm cao lưu trên máy bạn.">
+<meta name="theme-color" content="#22343a">
+<link rel="icon" href="./icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Bàn chơi giấy — Cờ caro &amp; 2048">
+<meta property="og:description" content="Hai trò chơi trên giấy ô ly. Chơi ngay trên trình duyệt, không cần cài đặt.">
+<meta property="og:image" content="./og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --desk:#22343a; --desk-2:#1a282d;
+    --paper:#fcfbf5; --rule:#c9d7e2;
+    --ink:#1f3fa8; --ink-red:#c33a2c;
+    --graphite:#39424a; --muted:#7b8792;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:"Be Vietnam Pro",system-ui,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(1200px 700px at 50% -10%, #2c4148 0%, var(--desk) 45%, var(--desk-2) 100%);
+    background-attachment:fixed;
+    color:#e7edf0; min-height:100%; padding:20px 20px 48px;
+  }
+  .wrap{max-width:1020px;margin:0 auto}
+
+  /* thanh điều hướng */
+  nav{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:26px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;letter-spacing:-.01em;
+    background:none;border:0;color:inherit;font-family:inherit;cursor:pointer;padding:0}
+  .brand span{display:inline-block;width:22px;height:22px;border:2px solid #9fb0b8;border-radius:3px;position:relative}
+  .brand span::before,.brand span::after{content:"";position:absolute;background:#9fb0b8}
+  .brand span::before{left:-2px;right:-2px;top:calc(50% - 1px);height:2px}
+  .brand span::after{top:-2px;bottom:-2px;left:calc(50% - 1px);width:2px}
+  .navlink{background:none;border:0;color:#9fb0b8;font:inherit;font-size:14px;cursor:pointer;padding:6px 0}
+  .navlink:hover{color:#e7edf0}
+
+  /* trang chủ */
+  .hero{margin:8px 0 34px}
+  h1{font-size:clamp(34px,6vw,58px);font-weight:800;letter-spacing:-.03em;line-height:1.02;margin:0;max-width:15ch}
+  .lede{margin:16px 0 0;color:#9fb0b8;font-size:16.5px;line-height:1.6;max-width:52ch}
+  .games{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  @media (max-width:760px){.games{grid-template-columns:1fr}}
+  .card{
+    background:var(--paper);color:var(--graphite);border:0;border-radius:3px;padding:0 0 20px;
+    text-align:left;font:inherit;cursor:pointer;overflow:hidden;
+    box-shadow:0 16px 30px rgba(0,0,0,.32);display:block;width:100%;
+    transition:transform .16s ease, box-shadow .16s ease;
+  }
+  .card:hover,.card:focus-visible{transform:translateY(-3px);box-shadow:0 22px 38px rgba(0,0,0,.4);outline:none}
+  .card:focus-visible{box-shadow:0 22px 38px rgba(0,0,0,.4),0 0 0 3px #ffd54a}
+  .card svg{display:block;width:100%;height:auto;background:#fff}
+  .card h2{margin:18px 20px 6px;font-size:23px;font-weight:800;letter-spacing:-.01em}
+  .card p{margin:0 20px;font-size:14.5px;line-height:1.55;color:#5d666e}
+  .card .stat{margin:14px 20px 0;padding-top:12px;border-top:1px solid #e6e3d7;font-size:13px;color:var(--muted)}
+  .card .stat b{color:var(--graphite);font-weight:700}
+
+  /* bố cục màn chơi */
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 272px;gap:24px;align-items:start}
+  @media (max-width:860px){.layout{grid-template-columns:1fr}}
+  .sheet{background:var(--paper);border-radius:3px;padding:14px;position:relative;
+    box-shadow:0 18px 34px rgba(0,0,0,.34),0 2px 0 #d8d5c8}
+  .sheet::after{content:"";position:absolute;inset:0;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.07);pointer-events:none}
+  canvas{display:block;width:100%;height:auto;border-radius:2px;touch-action:manipulation;outline:none;margin:0 auto}
+  canvas:focus-visible{box-shadow:0 0 0 3px rgba(31,63,168,.55)}
+  .panel{background:var(--paper);color:var(--graphite);border-radius:3px;padding:18px 18px 20px;box-shadow:0 12px 26px rgba(0,0,0,.3)}
+  h3.viewtitle{font-size:24px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
+  .viewsub{margin:0 0 20px;color:#9fb0b8;font-size:14.5px}
+
+  .status{font-weight:700;font-size:17px;line-height:1.35;margin:0 0 4px;display:flex;align-items:center;gap:9px;min-height:24px}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none;background:var(--ink)}
+  .dot.o{background:var(--ink-red)} .dot.idle{background:#b9c2c9}
+  .hint{margin:0 0 16px;font-size:13.5px;color:var(--muted);line-height:1.5}
+
+  .tally{display:flex;gap:18px;padding:12px 0 14px;margin:0 0 14px;border-top:1px solid #e6e3d7;border-bottom:1px solid #e6e3d7}
+  .tally div{font-size:13px;color:var(--muted)}
+  .tally b{display:block;font-size:22px;font-weight:800;color:var(--graphite);line-height:1.2}
+  .tally .x b{color:var(--ink)} .tally .o b{color:var(--ink-red)}
+
+  fieldset{border:0;padding:0;margin:0 0 14px}
+  legend{font-size:13px;color:var(--muted);padding:0;margin-bottom:6px}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;font:inherit;font-size:13.5px;font-weight:500;padding:7px 4px;cursor:pointer;
+    background:#fff;color:var(--graphite);border:1px solid #d7d3c4;border-radius:2px}
+  .seg button[aria-pressed="true"]{background:var(--graphite);border-color:var(--graphite);color:#fff;font-weight:700}
+  .seg button:disabled{opacity:.4;cursor:not-allowed}
+  .seg button:focus-visible,.act:focus-visible,.check input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .check{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;line-height:1.45;cursor:pointer;margin-bottom:14px}
+  .check input{margin:2px 0 0;accent-color:var(--ink);width:16px;height:16px;flex:none}
+  .acts{display:flex;gap:8px}
+  .act{flex:1;font:inherit;font-size:14px;font-weight:700;padding:10px;cursor:pointer;border-radius:2px;
+    border:1px solid var(--graphite);background:var(--graphite);color:#fff}
+  .act.ghost{background:#fff;color:var(--graphite)}
+  .act:disabled{opacity:.4;cursor:not-allowed}
+  footer{margin:20px 2px 0;color:#8fa2aa;font-size:13px}
+
+  /* 2048 */
+  .b2048{position:relative;width:100%;max-width:520px;margin:0 auto;aspect-ratio:1;background:#fcfbf5}
+  .b2048 .bg{position:absolute;border:1px solid var(--rule);background:#f7f8fa;border-radius:2px}
+  .tile{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:2px;
+    font-weight:800;letter-spacing:-.03em;border:1.5px solid rgba(0,0,0,.18);
+    transition:transform .11s ease-out;will-change:transform}
+  .tile.pop{animation:pop .16s ease-out}
+  .tile.merge{animation:merge .17s ease-out}
+  @keyframes pop{from{transform:var(--pos) scale(.3);opacity:.4}to{transform:var(--pos) scale(1);opacity:1}}
+  @keyframes merge{0%{transform:var(--pos) scale(1)}45%{transform:var(--pos) scale(1.16)}100%{transform:var(--pos) scale(1)}}
+  @media (prefers-reduced-motion: reduce){.tile{transition:none}.tile.pop,.tile.merge{animation:none}}
+  .overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;background:rgba(252,251,245,.9);text-align:center;padding:20px;z-index:5}
+  .overlay.on{display:flex}
+  .overlay p{margin:0;font-size:26px;font-weight:800;color:var(--graphite);letter-spacing:-.02em}
+  .overlay small{display:block;font-size:14px;font-weight:500;color:var(--muted);margin-top:6px;letter-spacing:0}
+  .overlay .act{flex:none;padding:10px 22px}
+  .scoreline{display:flex;gap:10px;margin-bottom:16px}
+  .scorebox{flex:1;background:#f4f3ea;border:1px solid #e6e3d7;border-radius:2px;padding:9px 11px}
+  .scorebox span{font-size:12px;color:var(--muted)}
+  .scorebox b{display:block;font-size:24px;font-weight:800;line-height:1.15;color:var(--graphite)}
+  ol.hs{list-style:none;margin:0;padding:0;font-size:13.5px}
+  ol.hs li{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px dotted #ddd9c9}
+  ol.hs li:last-child{border-bottom:0}
+  ol.hs .rank{width:16px;color:var(--muted);font-size:12px}
+  ol.hs .pts{font-weight:700;font-variant-numeric:tabular-nums}
+  ol.hs .meta{margin-left:auto;color:var(--muted);font-size:12px}
+  ol.hs .best{font-size:11.5px;font-weight:700;padding:1px 6px;border-radius:2px;background:#efe7cf;color:#7a5a14}
+  .empty{font-size:13.5px;color:var(--muted);line-height:1.55;margin:0}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <button class="brand" data-go="home"><span></span>Bàn chơi giấy</button>
+    <button class="navlink" id="backLink" data-go="home" hidden>← Chọn trò khác</button>
+  </nav>
+
+  <!-- ===== TRANG CHỦ ===== -->
+  <section id="view-home">
+    <div class="hero">
+      <h1>Hai trò chơi trên giấy ô ly</h1>
+      <p class="lede">Mở bằng trình duyệt, chơi ngay, không cần cài đặt. Điểm và thành tích được lưu lại trên máy bạn.</p>
+    </div>
+
+    <div class="games">
+      <button class="card" data-go="caro">
+        <svg viewBox="0 0 400 170" role="img" aria-label="Xem trước bàn cờ caro">
+          <rect width="400" height="170" fill="#fcfbf5"/>
+          <g stroke="#c9d7e2" stroke-width="1">
+            <path d="M0 34.5H400M0 68.5H400M0 102.5H400M0 136.5H400"/>
+            <path d="M30.5 0V170M64.5 0V170M98.5 0V170M132.5 0V170M166.5 0V170M200.5 0V170M234.5 0V170M268.5 0V170M302.5 0V170M336.5 0V170M370.5 0V170"/>
+          </g>
+          <g stroke="#1f3fa8" stroke-width="3.4" stroke-linecap="round">
+            <path d="M105 41l20 20M125 41l-20 20"/><path d="M139 75l20 20M159 75l-20 20"/>
+            <path d="M173 109l20 20M193 109l-20 20"/><path d="M207 143l20 20M227 143l-20 20"/>
+            <path d="M241 7l20 20M261 7l-20 20"/>
+          </g>
+          <g stroke="#c33a2c" stroke-width="3.4" fill="none">
+            <ellipse cx="149" cy="51" rx="11" ry="10"/><ellipse cx="183" cy="51" rx="11" ry="10.5"/>
+            <ellipse cx="217" cy="85" rx="11" ry="10"/><ellipse cx="115" cy="85" rx="10.5" ry="11"/>
+            <ellipse cx="251" cy="119" rx="11" ry="10"/>
+          </g>
+          <path d="M98 34C140 76 190 126 232 168" stroke="#c33a2c" stroke-width="4.5" stroke-linecap="round" opacity=".85" fill="none"/>
+        </svg>
+        <h2>Cờ caro</h2>
+        <p>Năm quân liền là thắng. Đấu với máy ba mức khó hoặc rủ người ngồi cạnh.</p>
+        <p class="stat" id="caroStat">Chưa có ván nào.</p>
+      </button>
+
+      <button class="card" data-go="g2048">
+        <svg viewBox="0 0 400 170" role="img" aria-label="Xem trước trò 2048">
+          <rect width="400" height="170" fill="#fcfbf5"/>
+          <g stroke="#c9d7e2" stroke-width="1">
+            <path d="M0 34.5H400M0 68.5H400M0 102.5H400M0 136.5H400"/>
+            <path d="M30.5 0V170M64.5 0V170M98.5 0V170M132.5 0V170M166.5 0V170M200.5 0V170M234.5 0V170M268.5 0V170M302.5 0V170M336.5 0V170M370.5 0V170"/>
+          </g>
+          <g font-family="Be Vietnam Pro, sans-serif" font-weight="800" text-anchor="middle">
+            <rect x="66" y="36" width="64" height="64" rx="2" fill="#e3e7ef" stroke="rgba(0,0,0,.18)"/>
+            <text x="98" y="79" font-size="24" fill="#4a5670">4</text>
+            <rect x="134" y="36" width="64" height="64" rx="2" fill="#6d8fdd" stroke="rgba(0,0,0,.18)"/>
+            <text x="166" y="79" font-size="24" fill="#fff">32</text>
+            <rect x="202" y="36" width="64" height="64" rx="2" fill="#e88f4a" stroke="rgba(0,0,0,.18)"/>
+            <text x="234" y="79" font-size="22" fill="#fff">256</text>
+            <rect x="270" y="36" width="64" height="64" rx="2" fill="#8f1f16" stroke="rgba(0,0,0,.18)"/>
+            <text x="302" y="78" font-size="20" fill="#ffe9a8">2048</text>
+          </g>
+        </svg>
+        <h2>2048</h2>
+        <p>Gộp các ô cùng số cho tới khi chạm 2048. Chọn bàn từ 3×3 đến 6×6.</p>
+        <p class="stat" id="hubStat">Chưa có ván nào.</p>
+      </button>
+    </div>
+  </section>
+
+  <!-- ===== CỜ CARO ===== -->
+  <section id="view-caro" hidden>
+    <h3 class="viewtitle">Cờ caro</h3>
+    <p class="viewsub">Năm quân liền nhau là thắng.</p>
+    <div class="layout">
+      <div class="sheet"><canvas id="board" tabindex="0" aria-label="Bàn cờ caro"></canvas></div>
+      <aside class="panel">
+        <p class="status"><span class="dot" id="dot"></span><span id="statusText">Đến lượt bạn</span></p>
+        <p class="hint" id="hint">Bấm vào một ô trống để đánh.</p>
+        <div class="tally">
+          <div class="x">Bạn (X)<b id="scoreX">0</b></div>
+          <div class="o">Máy (O)<b id="scoreO">0</b></div>
+          <div>Hòa<b id="scoreD">0</b></div>
+        </div>
+        <fieldset><legend>Đối thủ</legend>
+          <div class="seg" id="modeSeg">
+            <button data-v="ai" aria-pressed="true">Máy</button>
+            <button data-v="human" aria-pressed="false">Hai người</button>
+          </div>
+        </fieldset>
+        <fieldset><legend>Độ khó</legend>
+          <div class="seg" id="diffSeg">
+            <button data-v="easy" aria-pressed="false">Dễ</button>
+            <button data-v="normal" aria-pressed="true">Vừa</button>
+            <button data-v="hard" aria-pressed="false">Khó</button>
+          </div>
+        </fieldset>
+        <fieldset><legend>Bàn cờ</legend>
+          <div class="seg" id="sizeSeg">
+            <button data-v="15" aria-pressed="true">15 ô</button>
+            <button data-v="19" aria-pressed="false">19 ô</button>
+          </div>
+        </fieldset>
+        <label class="check"><input type="checkbox" id="blockRule" checked><span>Chặn hai đầu thì không tính thắng</span></label>
+        <label class="check" id="firstWrap"><input type="checkbox" id="aiFirst"><span>Máy đi trước (máy cầm X)</span></label>
+        <div class="acts">
+          <button class="act" id="newGame">Ván mới</button>
+          <button class="act ghost" id="undo">Hoàn tác</button>
+        </div>
+      </aside>
+    </div>
+    <footer>Dùng phím mũi tên để di chuyển, Enter để đặt quân.</footer>
+  </section>
+
+  <!-- ===== 2048 ===== -->
+  <section id="view-g2048" hidden>
+    <h3 class="viewtitle">2048</h3>
+    <p class="viewsub">Vuốt hoặc bấm phím mũi tên để dồn các ô.</p>
+    <div class="layout">
+      <div class="sheet">
+        <div class="b2048" id="tileBoard" tabindex="0" aria-label="Bàn 2048">
+          <div class="overlay" id="overlay">
+            <p id="overlayText">Hết nước đi<small id="overlaySub"></small></p>
+            <button class="act" id="overlayBtn">Ván mới</button>
+          </div>
+        </div>
+      </div>
+      <aside class="panel">
+        <div class="scoreline">
+          <div class="scorebox"><span>Điểm</span><b id="pts">0</b></div>
+          <div class="scorebox"><span>Kỷ lục</span><b id="bestPts">0</b></div>
+        </div>
+        <fieldset><legend>Số ô mỗi cạnh</legend>
+          <div class="seg" id="gridSeg">
+            <button data-v="3" aria-pressed="false">3</button>
+            <button data-v="4" aria-pressed="true">4</button>
+            <button data-v="5" aria-pressed="false">5</button>
+            <button data-v="6" aria-pressed="false">6</button>
+          </div>
+        </fieldset>
+        <div class="acts" style="margin-bottom:18px">
+          <button class="act" id="newGame2">Ván mới</button>
+          <button class="act ghost" id="undo2">Hoàn tác</button>
+        </div>
+        <fieldset style="margin-bottom:8px"><legend id="hsLegend">Bảng điểm cao — bàn 4×4</legend></fieldset>
+        <ol class="hs" id="hsList"></ol>
+        <p class="empty" id="hsEmpty" hidden>Chưa có điểm nào cho cỡ bàn này. Chơi xong một ván là có tên trong bảng.</p>
+      </aside>
+    </div>
+    <footer>Phím mũi tên hoặc W A S D. Trên màn hình cảm ứng thì vuốt.</footer>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============ lưu trữ ============ */
+  var Store = (function () {
+    var mem = {}, ok = false;
+    try { localStorage.setItem("__t", "1"); localStorage.removeItem("__t"); ok = true; } catch (e) { ok = false; }
+    return {
+      get: function (k, d) {
+        try { var v = ok ? localStorage.getItem(k) : mem[k]; return v == null ? d : JSON.parse(v); }
+        catch (e) { return d; }
+      },
+      set: function (k, v) {
+        try { var s = JSON.stringify(v); if (ok) localStorage.setItem(k, s); else mem[k] = s; } catch (e) {}
+      }
+    };
+  })();
+  function $(id) { return document.getElementById(id); }
+  function prefersReduced() {
+    try { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+    catch (e) { return false; }
+  }
+
+  /* ============ điều hướng ============ */
+  var views = { home: $("view-home"), caro: $("view-caro"), g2048: $("view-g2048") };
+  var current = "home";
+
+  function go(name) {
+    if (!views[name]) name = "home";
+    for (var k in views) views[k].hidden = (k !== name);
+    $("backLink").hidden = (name === "home");
+    current = name;
+    if (location.hash !== "#" + name) location.hash = name;
+    window.scrollTo(0, 0);
+    if (name === "caro") Caro.show();
+    if (name === "g2048") G2048.show();
+    if (name === "home") refreshHub();
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-go]");
+    if (b) go(b.dataset.go);
+  });
+  window.addEventListener("hashchange", function () { go(location.hash.replace("#", "")); });
+
+  function refreshHub() {
+    var rec = Store.get("banchoi.caro.record", { w: 0, l: 0, d: 0 });
+    $("caroStat").innerHTML = (rec.w + rec.l + rec.d)
+      ? "Đấu với máy: thắng <b>" + rec.w + "</b> · hòa <b>" + rec.d + "</b> · thua <b>" + rec.l + "</b>"
+      : "Chưa có ván nào.";
+    var best = 0, size = 0, i, s;
+    for (i = 3; i <= 6; i++) {
+      s = Store.get("banchoi.2048.hs." + i, []);
+      if (s.length && s[0].score > best) { best = s[0].score; size = i; }
+    }
+    $("hubStat").innerHTML = best
+      ? "Kỷ lục: <b>" + best.toLocaleString("vi-VN") + "</b> điểm trên bàn " + size + "×" + size
+      : "Chưa có ván nào.";
+  }
+
+  function seg(id, onPick) {
+    var box = $(id);
+    box.addEventListener("click", function (e) {
+      var b = e.target.closest("button");
+      if (!b || b.disabled) return;
+      Array.prototype.forEach.call(box.children, function (c) { c.setAttribute("aria-pressed", String(c === b)); });
+      onPick(b.dataset.v);
+    });
+  }
+
+  /* ==================================================================
+     CỜ CARO
+     ================================================================== */
+  var Caro = (function () {
+    var EMPTY = 0, X = 1, O = 2;
+    var DIRS = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    var reduceMotion = prefersReduced();
+
+    var S = {
+      n: 15, board: [], turn: X, history: [], over: false, winCells: null, winProgress: 1,
+      mode: "ai", diff: "normal", blockRule: true, human: X, thinking: false,
+      hover: null, cursor: null, score: { x: 0, o: 0, d: 0 }
+    };
+    var cv = $("board"), ctx = cv.getContext("2d"), cell = 36, pad = 10;
+
+    function idx(r, c) { return r * S.n + c; }
+    function inside(r, c) { return r >= 0 && c >= 0 && r < S.n && c < S.n; }
+    function at(r, c) { return inside(r, c) ? S.board[idx(r, c)] : -1; }
+
+    function reset(keepScore) {
+      S.board = new Array(S.n * S.n).fill(EMPTY);
+      S.turn = X; S.history = []; S.over = false; S.winCells = null; S.winProgress = 1; S.thinking = false;
+      S.cursor = { r: (S.n - 1) >> 1, c: (S.n - 1) >> 1 };
+      if (!keepScore) S.score = { x: 0, o: 0, d: 0 };
+      layout(); render();
+      if (S.mode === "ai" && S.turn !== S.human) scheduleAI();
+    }
+
+    function winAt(r, c, p) {
+      for (var d = 0; d < 4; d++) {
+        var dr = DIRS[d][0], dc = DIRS[d][1], cells = [[r, c]], i, rr, cc;
+        for (i = 1; i < S.n; i++) {
+          rr = r - dr * i; cc = c - dc * i;
+          if (at(rr, cc) !== p) break;
+          cells.unshift([rr, cc]);
+        }
+        var headR = r - dr * i, headC = c - dc * i;
+        for (i = 1; i < S.n; i++) {
+          rr = r + dr * i; cc = c + dc * i;
+          if (at(rr, cc) !== p) break;
+          cells.push([rr, cc]);
+        }
+        var tailR = r + dr * i, tailC = c + dc * i;
+        if (cells.length < 5) continue;
+        if (cells.length === 5 && S.blockRule) {
+          if (at(headR, headC) !== EMPTY && at(tailR, tailC) !== EMPTY) continue;
+        }
+        return cells;
+      }
+      return null;
+    }
+
+    function boardFull() {
+      for (var i = 0; i < S.board.length; i++) if (S.board[i] === EMPTY) return false;
+      return true;
+    }
+
+    function recordResult(result) {
+      if (S.mode !== "ai") return;
+      var rec = Store.get("banchoi.caro.record", { w: 0, l: 0, d: 0 });
+      rec[result]++;
+      Store.set("banchoi.caro.record", rec);
+    }
+
+    function place(r, c) {
+      if (S.over || at(r, c) !== EMPTY) return false;
+      var p = S.turn;
+      S.board[idx(r, c)] = p;
+      S.history.push({ r: r, c: c, p: p });
+      var w = winAt(r, c, p);
+      if (w) {
+        S.over = true; S.winCells = w; S.winProgress = reduceMotion ? 1 : 0;
+        if (p === X) S.score.x++; else S.score.o++;
+        recordResult(p === S.human ? "w" : "l");
+        if (!reduceMotion) animateWin();
+      } else if (boardFull()) {
+        S.over = true; S.score.d++; recordResult("d");
+      } else {
+        S.turn = p === X ? O : X;
+      }
+      render();
+      return true;
+    }
+
+    function humanPlay(r, c) {
+      if (S.thinking || S.over) return;
+      if (S.mode === "ai" && S.turn !== S.human) return;
+      if (!place(r, c)) return;
+      if (!S.over && S.mode === "ai") scheduleAI();
+    }
+
+    function undo() {
+      if (S.thinking || !S.history.length) return;
+      var steps = (S.mode === "ai" && S.history.length >= 2) ? 2 : 1;
+      if (S.over && S.winCells) {
+        if (S.history[S.history.length - 1].p === X) S.score.x--; else S.score.o--;
+      } else if (S.over) S.score.d--;
+      for (var i = 0; i < steps && S.history.length; i++) {
+        var m = S.history.pop();
+        S.board[idx(m.r, m.c)] = EMPTY;
+        S.turn = m.p;
+      }
+      S.over = false; S.winCells = null;
+      render();
+    }
+
+    function runScore(len, open) {
+      if (len >= 5) return (len === 5 && open === 0 && S.blockRule) ? 12000 : 1000000;
+      if (len === 4) return open === 2 ? 120000 : (open === 1 ? 12000 : 0);
+      if (len === 3) return open === 2 ? 6000 : (open === 1 ? 600 : 0);
+      if (len === 2) return open === 2 ? 300 : (open === 1 ? 40 : 0);
+      return open === 2 ? 12 : 2;
+    }
+
+    function sideScore(p) {
+      var total = 0;
+      for (var r = 0; r < S.n; r++) {
+        for (var c = 0; c < S.n; c++) {
+          if (at(r, c) !== p) continue;
+          for (var d = 0; d < 4; d++) {
+            var dr = DIRS[d][0], dc = DIRS[d][1];
+            if (at(r - dr, c - dc) === p) continue;
+            var len = 1;
+            while (at(r + dr * len, c + dc * len) === p) len++;
+            var open = (at(r - dr, c - dc) === EMPTY ? 1 : 0) + (at(r + dr * len, c + dc * len) === EMPTY ? 1 : 0);
+            total += runScore(len, open);
+          }
+        }
+      }
+      return total;
+    }
+
+    function evaluate(me) { return sideScore(me) - 1.12 * sideScore(me === X ? O : X); }
+
+    function moveScore(r, c, p) {
+      var total = 0;
+      for (var d = 0; d < 4; d++) {
+        var dr = DIRS[d][0], dc = DIRS[d][1], len = 1, i, back = 1, fwd = 1;
+        for (i = 1; i < 5; i++) { if (at(r - dr * i, c - dc * i) === p) { len++; back++; } else break; }
+        for (i = 1; i < 5; i++) { if (at(r + dr * i, c + dc * i) === p) { len++; fwd++; } else break; }
+        var open = (at(r - dr * back, c - dc * back) === EMPTY ? 1 : 0) +
+                   (at(r + dr * fwd, c + dc * fwd) === EMPTY ? 1 : 0);
+        total += runScore(len, open);
+      }
+      return total;
+    }
+
+    function hasNeighbour(r, c) {
+      for (var dr = -2; dr <= 2; dr++) {
+        for (var dc = -2; dc <= 2; dc++) {
+          if (!dr && !dc) continue;
+          var v = at(r + dr, c + dc);
+          if (v === X || v === O) return true;
+        }
+      }
+      return false;
+    }
+
+    function candidates(p, limit) {
+      var you = p === X ? O : X, list = [];
+      for (var r = 0; r < S.n; r++) {
+        for (var c = 0; c < S.n; c++) {
+          if (at(r, c) !== EMPTY || !hasNeighbour(r, c)) continue;
+          list.push({ r: r, c: c, s: moveScore(r, c, p) + moveScore(r, c, you) * 0.9 });
+        }
+      }
+      if (!list.length) {
+        var m = (S.n - 1) >> 1;
+        if (at(m, m) === EMPTY) list.push({ r: m, c: m, s: 0 });
+      }
+      list.sort(function (a, b) { return b.s - a.s; });
+      return list.slice(0, limit);
+    }
+
+    var deadline = 0;
+
+    function search(depth, alpha, beta, me, maximizing) {
+      var p = maximizing ? me : (me === X ? O : X);
+      var list = candidates(p, depth >= 3 ? 8 : 10);
+      if (!list.length) return 0;
+      var best = maximizing ? -Infinity : Infinity;
+      for (var i = 0; i < list.length; i++) {
+        var r = list[i].r, c = list[i].c, val;
+        S.board[idx(r, c)] = p;
+        if (winAt(r, c, p)) val = maximizing ? 900000 + depth * 1000 : -(900000 + depth * 1000);
+        else if (depth <= 1 || Date.now() > deadline) val = evaluate(me);
+        else val = search(depth - 1, alpha, beta, me, !maximizing);
+        S.board[idx(r, c)] = EMPTY;
+        if (maximizing) { if (val > best) best = val; if (best > alpha) alpha = best; }
+        else { if (val < best) best = val; if (best < beta) beta = best; }
+        if (beta <= alpha) break;
+      }
+      return best;
+    }
+
+    function pickMove(me) {
+      var you = me === X ? O : X, list = candidates(me, 12), i, r, c;
+      for (i = 0; i < list.length; i++) {
+        r = list[i].r; c = list[i].c;
+        S.board[idx(r, c)] = me;
+        var win = winAt(r, c, me);
+        S.board[idx(r, c)] = EMPTY;
+        if (win) return { r: r, c: c };
+      }
+      if (S.diff !== "easy" || Math.random() < 0.7) {
+        for (i = 0; i < list.length; i++) {
+          r = list[i].r; c = list[i].c;
+          S.board[idx(r, c)] = you;
+          var lose = winAt(r, c, you);
+          S.board[idx(r, c)] = EMPTY;
+          if (lose) return { r: r, c: c };
+        }
+      }
+      if (S.diff === "easy") {
+        var pool = list.slice(0, 4);
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+      if (S.diff === "normal") {
+        var jit = list.slice(0, 3).map(function (m) { return { m: m, v: m.s * (0.9 + Math.random() * 0.2) }; });
+        jit.sort(function (a, b) { return b.v - a.v; });
+        return jit[0].m;
+      }
+      deadline = Date.now() + 2500;
+      var best = list[0], bestVal = -Infinity, alpha = -Infinity, pool2 = list.slice(0, 8);
+      for (i = 0; i < pool2.length; i++) {
+        r = pool2[i].r; c = pool2[i].c;
+        S.board[idx(r, c)] = me;
+        var v = winAt(r, c, me) ? 1000000 : search(5, alpha, Infinity, me, false);
+        S.board[idx(r, c)] = EMPTY;
+        if (v > bestVal) { bestVal = v; best = pool2[i]; }
+        if (v > alpha) alpha = v;
+      }
+      return best;
+    }
+
+    function scheduleAI() {
+      S.thinking = true; render();
+      setTimeout(function () {
+        var mv = pickMove(S.turn);
+        S.thinking = false;
+        if (mv) place(mv.r, mv.c); else render();
+      }, 260);
+    }
+
+    function rnd(seed) { var x = Math.sin(seed * 127.1) * 43758.5453; return x - Math.floor(x); }
+    function wob(r, c, k, amp) { return (rnd(r * 91 + c * 17 + k * 7) - 0.5) * amp; }
+
+    function layout() {
+      var w = cv.parentElement.clientWidth - 28;
+      if (w < 40) return;
+      cell = Math.max(20, Math.min(38, Math.floor((w - pad * 2) / S.n)));
+      var size = cell * S.n + pad * 2, dpr = window.devicePixelRatio || 1;
+      cv.width = size * dpr; cv.height = size * dpr;
+      cv.style.width = size + "px"; cv.style.maxWidth = "100%";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function cx(c) { return pad + c * cell + cell / 2; }
+    function cy(r) { return pad + r * cell + cell / 2; }
+
+    function drawX(r, c, alpha) {
+      var m = cell * 0.28, x = cx(c), y = cy(r);
+      ctx.save(); ctx.globalAlpha = alpha;
+      ctx.strokeStyle = "#1f3fa8"; ctx.lineWidth = Math.max(2, cell * 0.09); ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x - m + wob(r, c, 1, 3), y - m + wob(r, c, 2, 3));
+      ctx.lineTo(x + m + wob(r, c, 3, 3), y + m + wob(r, c, 4, 3));
+      ctx.moveTo(x + m + wob(r, c, 5, 3), y - m + wob(r, c, 6, 3));
+      ctx.lineTo(x - m + wob(r, c, 7, 3), y + m + wob(r, c, 8, 3));
+      ctx.stroke(); ctx.restore();
+    }
+    function drawO(r, c, alpha) {
+      var x = cx(c), y = cy(r), rad = cell * 0.29;
+      ctx.save(); ctx.globalAlpha = alpha;
+      ctx.strokeStyle = "#c33a2c"; ctx.lineWidth = Math.max(2, cell * 0.09); ctx.lineCap = "round";
+      var start = rnd(r * 13 + c * 29) * 6.28;
+      ctx.beginPath();
+      ctx.ellipse(x + wob(r, c, 9, 2), y + wob(r, c, 10, 2), rad, rad * (0.92 + rnd(r + c * 5) * 0.12),
+                  wob(r, c, 11, 0.4), start, start + 6.0);
+      ctx.stroke(); ctx.restore();
+    }
+
+    function render() {
+      var size = cell * S.n + pad * 2;
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = "#fcfbf5"; ctx.fillRect(0, 0, size, size);
+      ctx.strokeStyle = "#c9d7e2"; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (var i = 0; i <= S.n; i++) {
+        var p = pad + i * cell + 0.5;
+        ctx.moveTo(pad, p); ctx.lineTo(pad + cell * S.n, p);
+        ctx.moveTo(p, pad); ctx.lineTo(p, pad + cell * S.n);
+      }
+      ctx.stroke();
+
+      var last = S.history[S.history.length - 1];
+      if (last) {
+        ctx.fillStyle = "rgba(255,213,74,.45)";
+        ctx.fillRect(pad + last.c * cell + 2, pad + last.r * cell + 2, cell - 4, cell - 4);
+      }
+      for (var r = 0; r < S.n; r++) {
+        for (var c = 0; c < S.n; c++) {
+          var v = at(r, c);
+          if (v === X) drawX(r, c, 1); else if (v === O) drawO(r, c, 1);
+        }
+      }
+      var canPlay = !S.over && !S.thinking && (S.mode === "human" || S.turn === S.human);
+      var ghost = S.hover || S.cursor;
+      if (canPlay && ghost && at(ghost.r, ghost.c) === EMPTY) {
+        if (S.cursor && !S.hover) {
+          ctx.strokeStyle = "rgba(57,66,74,.5)"; ctx.lineWidth = 1.5;
+          ctx.strokeRect(pad + ghost.c * cell + 2.5, pad + ghost.r * cell + 2.5, cell - 5, cell - 5);
+        }
+        if (S.turn === X) drawX(ghost.r, ghost.c, 0.26); else drawO(ghost.r, ghost.c, 0.26);
+      }
+      if (S.winCells && S.winCells.length) {
+        var a = S.winCells[0], b = S.winCells[S.winCells.length - 1];
+        var x1 = cx(a[1]), y1 = cy(a[0]), x2 = cx(b[1]), y2 = cy(b[0]), t = S.winProgress;
+        var ex = x1 + (x2 - x1) * t, ey = y1 + (y2 - y1) * t;
+        var dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+        var ox = -dy / L * cell * 0.38, oy = dx / L * cell * 0.38;
+        ctx.save();
+        ctx.strokeStyle = "rgba(195,58,44,.9)"; ctx.lineWidth = Math.max(3, cell * 0.12); ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x1 - ox * 0.2 - (dx / L) * cell * 0.4, y1 - oy * 0.2 - (dy / L) * cell * 0.4);
+        ctx.quadraticCurveTo((x1 + ex) / 2 + ox * 0.25, (y1 + ey) / 2 + oy * 0.25,
+                             ex + (dx / L) * cell * 0.4 * t, ey + (dy / L) * cell * 0.4 * t);
+        ctx.stroke(); ctx.restore();
+      }
+      updatePanel();
+    }
+
+    function animateWin() {
+      var t0 = performance.now();
+      function step(now) {
+        S.winProgress = Math.min(1, (now - t0) / 420);
+        render();
+        if (S.winProgress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    function sideName(p) {
+      if (S.mode === "human") return p === X ? "Người chơi X" : "Người chơi O";
+      return p === S.human ? "Bạn" : "Máy";
+    }
+
+    function updatePanel() {
+      var text, hint, cls = S.turn === X ? "dot" : "dot o";
+      if (S.over && S.winCells) {
+        var w = S.history[S.history.length - 1].p;
+        cls = w === X ? "dot" : "dot o";
+        text = S.mode === "human" ? sideName(w) + " thắng!" : (w === S.human ? "Bạn thắng!" : "Máy thắng ván này.");
+        hint = "Bấm Ván mới để chơi tiếp, hoặc Hoàn tác để đi lại.";
+      } else if (S.over) {
+        cls = "dot idle"; text = "Hòa — hết ô trống."; hint = "Thử bàn 19 ô cho rộng tay.";
+      } else if (S.thinking) {
+        text = "Máy đang nghĩ…"; hint = "Độ khó càng cao, máy tính càng lâu.";
+      } else {
+        text = "Đến lượt " + sideName(S.turn).toLowerCase() + " (" + (S.turn === X ? "X" : "O") + ")";
+        text = text.charAt(0).toUpperCase() + text.slice(1);
+        hint = "Bấm vào một ô trống để đánh.";
+      }
+      $("statusText").textContent = text;
+      $("dot").className = cls;
+      $("hint").textContent = hint;
+      $("scoreX").textContent = S.score.x;
+      $("scoreO").textContent = S.score.o;
+      $("scoreD").textContent = S.score.d;
+      $("undo").disabled = !S.history.length || S.thinking;
+    }
+
+    function labelTally() {
+      var xs = document.querySelector("#view-caro .tally .x"), os = document.querySelector("#view-caro .tally .o");
+      if (S.mode === "human") {
+        xs.childNodes[0].nodeValue = "Người chơi X";
+        os.childNodes[0].nodeValue = "Người chơi O";
+      } else {
+        xs.childNodes[0].nodeValue = (S.human === X ? "Bạn" : "Máy") + " (X)";
+        os.childNodes[0].nodeValue = (S.human === X ? "Máy" : "Bạn") + " (O)";
+      }
+      $("firstWrap").style.display = S.mode === "human" ? "none" : "flex";
+    }
+
+    seg("modeSeg", function (v) {
+      S.mode = v;
+      Array.prototype.forEach.call($("diffSeg").children, function (b) { b.disabled = v === "human"; });
+      labelTally(); reset(false);
+    });
+    seg("diffSeg", function (v) { S.diff = v; updatePanel(); });
+    seg("sizeSeg", function (v) { S.n = parseInt(v, 10); reset(false); });
+    $("blockRule").addEventListener("change", function (e) { S.blockRule = e.target.checked; });
+    $("aiFirst").addEventListener("change", function (e) { S.human = e.target.checked ? O : X; labelTally(); reset(true); });
+    $("newGame").addEventListener("click", function () { reset(true); });
+    $("undo").addEventListener("click", undo);
+
+    function cellFromEvent(e) {
+      var rect = cv.getBoundingClientRect(), scale = (cell * S.n + pad * 2) / rect.width;
+      var c = Math.floor(((e.clientX - rect.left) * scale - pad) / cell);
+      var r = Math.floor(((e.clientY - rect.top) * scale - pad) / cell);
+      return inside(r, c) ? { r: r, c: c } : null;
+    }
+    cv.addEventListener("click", function (e) {
+      var p = cellFromEvent(e);
+      if (p) { S.cursor = p; humanPlay(p.r, p.c); }
+    });
+    cv.addEventListener("mousemove", function (e) {
+      var p = cellFromEvent(e);
+      var changed = (!!p !== !!S.hover) || (p && S.hover && (p.r !== S.hover.r || p.c !== S.hover.c));
+      S.hover = p;
+      if (changed) render();
+    });
+    cv.addEventListener("mouseleave", function () { S.hover = null; render(); });
+    cv.addEventListener("keydown", function (e) {
+      var k = e.key, cur = S.cursor;
+      if (!cur) return;
+      var moved = true;
+      if (k === "ArrowUp") cur.r = Math.max(0, cur.r - 1);
+      else if (k === "ArrowDown") cur.r = Math.min(S.n - 1, cur.r + 1);
+      else if (k === "ArrowLeft") cur.c = Math.max(0, cur.c - 1);
+      else if (k === "ArrowRight") cur.c = Math.min(S.n - 1, cur.c + 1);
+      else if (k === "Enter" || k === " ") { humanPlay(cur.r, cur.c); moved = false; }
+      else return;
+      e.preventDefault(); S.hover = null;
+      if (moved) render();
+    });
+
+    var started = false;
+    return {
+      show: function () {
+        if (!started) { labelTally(); reset(false); started = true; }
+        else { layout(); render(); }
+      },
+      resize: function () { if (current === "caro") { layout(); render(); } }
+    };
+  })();
+
+  /* ==================================================================
+     2048
+     ================================================================== */
+  var G2048 = (function () {
+    var COLORS = {
+      2: ["#f0eee3", "#6b6a60"], 4: ["#e3e7ef", "#4a5670"], 8: ["#cfdaf2", "#23365f"],
+      16: ["#9fb8ea", "#12234a"], 32: ["#6d8fdd", "#ffffff"], 64: ["#3f63c7", "#ffffff"],
+      128: ["#efb46a", "#4a3212"], 256: ["#e88f4a", "#ffffff"], 512: ["#d9603c", "#ffffff"],
+      1024: ["#c33a2c", "#ffffff"], 2048: ["#8f1f16", "#ffe9a8"], 4096: ["#2e6b4f", "#ffffff"],
+      8192: ["#1f3fa8", "#ffffff"]
+    };
+    var reduceMotion = prefersReduced();
+    var boardEl = $("tileBoard"), overlay = $("overlay");
+    var n = 4, gap = 8, cell = 0;
+    var grid = [], tiles = [], nodes = {}, uid = 1;
+    var score = 0, best = 0, over = false, won = false, keepGoing = false;
+    var undoStack = [], busy = false, started = false;
+
+    function key() { return "banchoi.2048.hs." + n; }
+    function bestKey() { return "banchoi.2048.best." + n; }
+
+    function buildBg() {
+      Array.prototype.slice.call(boardEl.querySelectorAll(".bg,.tile")).forEach(function (e) { e.remove(); });
+      nodes = {};
+      for (var r = 0; r < n; r++) {
+        for (var c = 0; c < n; c++) {
+          var d = document.createElement("div");
+          d.className = "bg";
+          boardEl.insertBefore(d, overlay);
+        }
+      }
+      sizeUp();
+    }
+
+    function sizeUp() {
+      var w = boardEl.clientWidth;
+      if (!w) return;
+      gap = n >= 5 ? 6 : 8;
+      cell = (w - gap * (n + 1)) / n;
+      var bgs = boardEl.querySelectorAll(".bg"), i = 0;
+      for (var r = 0; r < n; r++) {
+        for (var c = 0; c < n; c++, i++) {
+          var b = bgs[i];
+          if (!b) continue;
+          b.style.width = cell + "px"; b.style.height = cell + "px";
+          b.style.left = pos(c) + "px"; b.style.top = pos(r) + "px";
+        }
+      }
+      tiles.forEach(function (t) { paint(t, true); });
+    }
+    function pos(i) { return gap + i * (cell + gap); }
+
+    function fontFor(v) {
+      var len = String(v).length;
+      var f = cell * (len <= 2 ? 0.44 : len === 3 ? 0.36 : len === 4 ? 0.29 : 0.24);
+      return Math.max(11, f) + "px";
+    }
+
+    function paint(t, instant) {
+      var el = nodes[t.id];
+      if (!el) {
+        el = document.createElement("div");
+        el.className = "tile";
+        boardEl.insertBefore(el, overlay);
+        nodes[t.id] = el;
+        instant = true;
+      }
+      var col = COLORS[t.v] || COLORS[8192];
+      el.style.width = cell + "px"; el.style.height = cell + "px";
+      el.style.background = col[0]; el.style.color = col[1];
+      el.style.fontSize = fontFor(t.v);
+      el.textContent = t.v;
+      var to = "translate(" + pos(t.c) + "px," + pos(t.r) + "px)";
+      el.style.setProperty("--pos", to);
+      if (instant) {
+        var old = el.style.transition;
+        el.style.transition = "none";
+        el.style.transform = to;
+        el.offsetHeight;
+        el.style.transition = old;
+      } else {
+        el.style.transform = to;
+      }
+      return el;
+    }
+
+    function addRandom(pop) {
+      var free = [];
+      for (var i = 0; i < n * n; i++) if (!grid[i]) free.push(i);
+      if (!free.length) return null;
+      var at = free[Math.floor(Math.random() * free.length)];
+      var t = { id: uid++, v: Math.random() < 0.9 ? 2 : 4, r: Math.floor(at / n), c: at % n };
+      grid[at] = t; tiles.push(t);
+      var el = paint(t, true);
+      if (pop && !reduceMotion) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
+      return t;
+    }
+
+    function loadState(st) {
+      Object.keys(nodes).forEach(function (k) { nodes[k].remove(); });
+      nodes = {}; tiles = []; grid = new Array(n * n).fill(null);
+      st.v.forEach(function (o) {
+        var t = { id: uid++, v: o.v, r: o.r, c: o.c };
+        grid[o.r * n + o.c] = t; tiles.push(t); paint(t, true);
+      });
+      score = st.s; over = false; won = st.v.some(function (o) { return o.v >= 2048; });
+      overlay.classList.remove("on");
+      updatePanel();
+    }
+
+    function reset(recordPrev) {
+      if (recordPrev && score > 0) saveScore();
+      Object.keys(nodes).forEach(function (k) { nodes[k].remove(); });
+      nodes = {}; tiles = []; grid = new Array(n * n).fill(null);
+      score = 0; over = false; won = false; keepGoing = false; undoStack = []; busy = false;
+      best = Store.get(bestKey(), 0);
+      overlay.classList.remove("on");
+      buildBg();
+      addRandom(true); addRandom(true);
+      updatePanel(); renderHS();
+    }
+
+    function maxTile() {
+      return tiles.reduce(function (m, t) { return Math.max(m, t.v); }, 0);
+    }
+
+    function saveScore() {
+      if (score <= 0) return;
+      var list = Store.get(key(), []);
+      var d = new Date();
+      list.push({
+        score: score, tile: maxTile(),
+        date: d.getDate() + "/" + (d.getMonth() + 1) + "/" + String(d.getFullYear()).slice(2)
+      });
+      list.sort(function (a, b) { return b.score - a.score; });
+      Store.set(key(), list.slice(0, 8));
+      if (score > best) { best = score; Store.set(bestKey(), best); }
+      renderHS();
+    }
+
+    function canMove() {
+      for (var i = 0; i < n * n; i++) if (!grid[i]) return true;
+      for (var r = 0; r < n; r++) {
+        for (var c = 0; c < n; c++) {
+          var v = grid[r * n + c].v;
+          if (c + 1 < n && grid[r * n + c + 1].v === v) return true;
+          if (r + 1 < n && grid[(r + 1) * n + c].v === v) return true;
+        }
+      }
+      return false;
+    }
+
+    // dir: 0 trái, 1 phải, 2 lên, 3 xuống
+    function move(dir) {
+      if (busy || over) return;
+      var prev = { v: tiles.map(function (t) { return { v: t.v, r: t.r, c: t.c }; }), s: score };
+      var moved = false, gained = 0, dead = [];
+      var horiz = dir === 0 || dir === 1, forward = dir === 1 || dir === 3;
+      var newGrid = new Array(n * n).fill(null);
+
+      for (var line = 0; line < n; line++) {
+        var seq = [];
+        for (var i = 0; i < n; i++) {
+          var r = horiz ? line : i, c = horiz ? i : line;
+          var t = grid[r * n + c];
+          if (t) seq.push(t);
+        }
+        if (forward) seq.reverse();
+
+        var out = [], k;
+        for (k = 0; k < seq.length; k++) {
+          var cur = seq[k];
+          if (k + 1 < seq.length && seq[k + 1].v === cur.v) {
+            var gone = seq[k + 1];
+            cur.v *= 2; cur.justMerged = true;
+            gained += cur.v;
+            if (cur.v >= 2048 && !won) won = true;
+            gone.host = cur;            // ô bị gộp sẽ trượt tới ô giữ lại
+            out.push(cur); dead.push(gone);
+            k++;
+          } else {
+            cur.justMerged = false;
+            out.push(cur);
+          }
+        }
+
+        for (k = 0; k < out.length; k++) {
+          var slot = forward ? n - 1 - k : k;
+          var rr = horiz ? line : slot, cc = horiz ? slot : line;
+          var tile = out[k];
+          if (tile.r !== rr || tile.c !== cc) moved = true;
+          tile.r = rr; tile.c = cc;
+          newGrid[rr * n + cc] = tile;
+        }
+      }
+
+      if (!moved && !dead.length) {
+        // trả lại giá trị nếu có thay đổi nhầm (không xảy ra, nhưng cho chắc)
+        return;
+      }
+
+      dead.forEach(function (g) {
+        g.r = g.host.r; g.c = g.host.c; g.host = null;
+        paint(g, false);
+      });
+
+      undoStack.push(prev);
+      if (undoStack.length > 20) undoStack.shift();
+
+      grid = newGrid;
+      tiles = tiles.filter(function (t) { return dead.indexOf(t) === -1; });
+      score += gained;
+      if (score > best) { best = score; Store.set(bestKey(), best); }
+
+      tiles.forEach(function (t) { paint(t, false); });
+
+      busy = true;
+      setTimeout(function () {
+        dead.forEach(function (g) { if (nodes[g.id]) { nodes[g.id].remove(); delete nodes[g.id]; } });
+        tiles.forEach(function (t) {
+          if (t.justMerged) {
+            var el = nodes[t.id];
+            if (el && !reduceMotion) { el.classList.remove("merge"); void el.offsetWidth; el.classList.add("merge"); }
+            t.justMerged = false;
+          }
+        });
+        addRandom(true);
+        busy = false;
+        if (won && !keepGoing) {
+          finish(true);
+        } else if (!canMove()) {
+          finish(false);
+        }
+        updatePanel();
+      }, reduceMotion ? 0 : 115);
+
+      updatePanel();
+    }
+
+    function finish(isWin) {
+      if (isWin) {
+        keepGoing = true;
+        $("overlayText").childNodes[0].nodeValue = "Chạm 2048!";
+        $("overlaySub").textContent = score.toLocaleString("vi-VN") + " điểm. Chơi tiếp để lên ô cao hơn.";
+        $("overlayBtn").textContent = "Chơi tiếp";
+        $("overlayBtn").dataset.act = "continue";
+      } else {
+        over = true;
+        saveScore();
+        $("overlayText").childNodes[0].nodeValue = "Hết nước đi";
+        $("overlaySub").textContent = score.toLocaleString("vi-VN") + " điểm · ô cao nhất " + maxTile();
+        $("overlayBtn").textContent = "Ván mới";
+        $("overlayBtn").dataset.act = "new";
+      }
+      overlay.classList.add("on");
+    }
+
+    function undo() {
+      if (busy || !undoStack.length) return;
+      overlay.classList.remove("on");
+      loadState(undoStack.pop());
+      over = false;
+      updatePanel();
+    }
+
+    function updatePanel() {
+      $("pts").textContent = score.toLocaleString("vi-VN");
+      $("bestPts").textContent = best.toLocaleString("vi-VN");
+      $("undo2").disabled = !undoStack.length || busy;
+    }
+
+    function renderHS() {
+      var list = Store.get(key(), []), ol = $("hsList");
+      $("hsLegend").textContent = "Bảng điểm cao — bàn " + n + "×" + n;
+      ol.innerHTML = "";
+      $("hsEmpty").hidden = list.length > 0;
+      list.slice(0, 5).forEach(function (row, i) {
+        var li = document.createElement("li");
+        li.innerHTML = '<span class="rank">' + (i + 1) + '</span>' +
+          '<span class="pts">' + row.score.toLocaleString("vi-VN") + '</span>' +
+          '<span class="best">ô ' + row.tile + '</span>' +
+          '<span class="meta">' + row.date + '</span>';
+        ol.appendChild(li);
+      });
+    }
+
+    seg("gridSeg", function (v) {
+      if (score > 0 && !over) saveScore();
+      n = parseInt(v, 10);
+      reset(false);
+    });
+    $("newGame2").addEventListener("click", function () { reset(true); });
+    $("undo2").addEventListener("click", undo);
+    $("overlayBtn").addEventListener("click", function () {
+      if (this.dataset.act === "continue") { overlay.classList.remove("on"); }
+      else reset(false);
+    });
+
+    var KEYS = {
+      ArrowLeft: 0, ArrowRight: 1, ArrowUp: 2, ArrowDown: 3,
+      a: 0, d: 1, w: 2, s: 3, A: 0, D: 1, W: 2, S: 3
+    };
+    window.addEventListener("keydown", function (e) {
+      if (current !== "g2048") return;
+      var d = KEYS[e.key];
+      if (d === undefined) return;
+      e.preventDefault();
+      move(d);
+    });
+
+    var tx = 0, ty = 0;
+    boardEl.addEventListener("touchstart", function (e) {
+      tx = e.touches[0].clientX; ty = e.touches[0].clientY;
+    }, { passive: true });
+    boardEl.addEventListener("touchend", function (e) {
+      var dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+      move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 0) : (dy > 0 ? 3 : 2));
+    });
+
+    return {
+      show: function () {
+        if (!started) { reset(false); started = true; }
+        else { sizeUp(); renderHS(); updatePanel(); }
+        boardEl.focus({ preventScroll: true });
+      },
+      resize: function () { if (current === "g2048") sizeUp(); },
+      saveIfPlaying: function () { if (score > 0 && !over) saveScore(); }
+    };
+  })();
+
+  window.addEventListener("resize", function () { Caro.resize(); G2048.resize(); });
+  window.addEventListener("beforeunload", function () { G2048.saveIfPlaying(); });
+
+  refreshHub();
+  go(location.hash ? location.hash.replace("#", "") : "home");
+})();
+</script>
+
+<script>
+  if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("./sw.js").catch(function () {});
+    });
+  }
+</script>
+</body>
+</html>
