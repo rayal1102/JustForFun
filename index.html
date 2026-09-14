@@ -134,6 +134,37 @@
   ol.hs .best{font-size:11.5px;font-weight:700;padding:1px 6px;border-radius:2px;background:#efe7cf;color:#7a5a14}
   .empty{font-size:13.5px;color:var(--muted);line-height:1.55;margin:0}
   [hidden]{display:none !important}
+
+  /* tên người chơi */
+  .kicker{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.16);color:#c7d2d8;font-size:12.5px;font-weight:600;
+    padding:5px 12px;border-radius:999px;margin-bottom:16px;letter-spacing:.01em}
+  .namebar{background:var(--paper);color:var(--graphite);border-radius:3px;padding:14px 18px;
+    box-shadow:0 10px 22px rgba(0,0,0,.28);margin:0 0 26px;display:flex;align-items:center;
+    justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:14px}
+  .namebar-set{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .namebar-set b{color:var(--ink)}
+  .namebar-form{display:flex;gap:8px;align-items:center;flex:1;min-width:250px}
+  .namebar-form label{font-weight:700;font-size:13.5px;white-space:nowrap}
+  .namebar-form input{flex:1;min-width:0;font:inherit;font-size:14px;padding:8px 10px;
+    border:1px solid #d7d3c4;border-radius:2px;background:#fff;color:var(--graphite)}
+  .namebar-form input:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+  .namebar-form .act{flex:none;padding:8px 16px;font-size:13.5px}
+
+  /* bảng xếp hạng */
+  .lbwrap{margin-top:32px;background:var(--paper);color:var(--graphite);border-radius:3px;
+    padding:22px 22px 10px;box-shadow:0 16px 30px rgba(0,0,0,.32)}
+  .lbhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .lbhead h2{margin:0 0 4px;font-size:19px;font-weight:800;letter-spacing:-.01em}
+  .lbsub{margin:0 0 14px;font-size:13px;color:var(--muted)}
+  ol.leaderboard{list-style:none;margin:0;padding:0}
+  .lb-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px dotted #ddd9c9}
+  .lb-row:first-child{border-top:0}
+  .lb-rank{width:28px;flex:none;font-size:16px;text-align:center;font-weight:800;color:var(--muted)}
+  .lb-name{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lb-pts{font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .lb-detail{margin-left:auto;color:var(--muted);font-size:12.5px;white-space:nowrap}
+  @media (max-width:560px){.lb-detail{display:none}}
 </style>
 </head>
 <body>
@@ -145,7 +176,20 @@
 
   <!-- ===== TRANG CHỦ ===== -->
   <section id="view-home">
+    <div class="namebar" id="namebar">
+      <div class="namebar-set" id="namebarSet" hidden>
+        <span>👋 Chào, <b id="playerNameLabel"></b>! Điểm của bạn sẽ được ghi vào bảng xếp hạng bên dưới.</span>
+        <button class="navlink" id="renameBtn" type="button">Đổi tên</button>
+      </div>
+      <form class="namebar-form" id="namebarForm">
+        <label for="nameInput">Bạn tên gì?</label>
+        <input id="nameInput" type="text" maxlength="18" placeholder="Nhập tên để lên bảng xếp hạng" autocomplete="off" required>
+        <button class="act" type="submit">Lưu tên</button>
+      </form>
+    </div>
+
     <div class="hero">
+      <span class="kicker">🎲 Trò chơi trên giấy ô ly</span>
       <h1>Hai trò chơi trên giấy ô ly</h1>
       <p class="lede">Mở bằng trình duyệt, chơi ngay, không cần cài đặt. Điểm và thành tích được lưu lại trên máy bạn.</p>
     </div>
@@ -197,6 +241,15 @@
         <p>Gộp các ô cùng số cho tới khi chạm 2048. Chọn bàn từ 3×3 đến 6×6.</p>
         <p class="stat" id="hubStat">Chưa có ván nào.</p>
       </button>
+    </div>
+
+    <div class="lbwrap">
+      <div class="lbhead">
+        <h2>🏆 Top 5 người chơi</h2>
+      </div>
+      <p class="lbsub">Xếp theo điểm cao nhất của mỗi người, tính cả Cờ caro (thắng máy) và 2048.</p>
+      <ol class="leaderboard" id="leaderboard"></ol>
+      <p class="empty" id="lbEmpty" hidden>Chưa có ai lên bảng. Nhập tên ở trên rồi chơi thử một ván!</p>
     </div>
   </section>
 
@@ -341,6 +394,74 @@
     $("hubStat").innerHTML = best
       ? "Kỷ lục: <b>" + best.toLocaleString("vi-VN") + "</b> điểm trên bàn " + size + "×" + size
       : "Chưa có ván nào.";
+    renderNamebar();
+    renderLeaderboard();
+  }
+
+  /* ============ tên người chơi & bảng xếp hạng ============ */
+  function getPlayerName() { return (Store.get("banchoi.playerName", "") || "").trim(); }
+  function setPlayerName(name) {
+    name = name.trim().slice(0, 18);
+    Store.set("banchoi.playerName", name);
+    renderNamebar();
+  }
+  function renderNamebar() {
+    var name = getPlayerName();
+    if (name) {
+      $("playerNameLabel").textContent = name;
+      $("namebarSet").hidden = false; $("namebarForm").hidden = true;
+    } else {
+      $("namebarSet").hidden = true; $("namebarForm").hidden = false;
+    }
+  }
+  $("namebarForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var v = $("nameInput").value;
+    if (v.trim()) { setPlayerName(v); $("nameInput").value = ""; }
+  });
+  $("renameBtn").addEventListener("click", function () {
+    $("namebarSet").hidden = true; $("namebarForm").hidden = false;
+    $("nameInput").value = getPlayerName();
+    $("nameInput").focus();
+  });
+
+  function formatDateVN() {
+    var d = new Date();
+    return d.getDate() + "/" + (d.getMonth() + 1) + "/" + String(d.getFullYear()).slice(2);
+  }
+  function diffPoints(d) { return d === "easy" ? 200 : d === "hard" ? 1000 : 500; }
+  function diffLabel(d) { return d === "easy" ? "Dễ" : d === "hard" ? "Khó" : "Vừa"; }
+
+  function recordLeaderboard(points, detail) {
+    var name = getPlayerName();
+    if (!name || points <= 0) return;
+    var board = Store.get("banchoi.leaderboard", {});
+    var cur = board[name];
+    if (!cur || points > cur.points) {
+      board[name] = { name: name, points: points, detail: detail, date: formatDateVN() };
+      Store.set("banchoi.leaderboard", board);
+    }
+    renderLeaderboard();
+  }
+
+  function renderLeaderboard() {
+    var board = Store.get("banchoi.leaderboard", {});
+    var list = Object.keys(board).map(function (k) { return board[k]; });
+    list.sort(function (a, b) { return b.points - a.points; });
+    list = list.slice(0, 5);
+    var ol = $("leaderboard");
+    ol.innerHTML = "";
+    $("lbEmpty").hidden = list.length > 0;
+    var medals = ["🥇", "🥈", "🥉"];
+    list.forEach(function (row, i) {
+      var li = document.createElement("li"); li.className = "lb-row";
+      var rank = document.createElement("span"); rank.className = "lb-rank"; rank.textContent = medals[i] || String(i + 1);
+      var name = document.createElement("span"); name.className = "lb-name"; name.textContent = row.name;
+      var pts = document.createElement("span"); pts.className = "lb-pts"; pts.textContent = row.points.toLocaleString("vi-VN");
+      var detail = document.createElement("span"); detail.className = "lb-detail"; detail.textContent = row.detail + " · " + row.date;
+      li.appendChild(rank); li.appendChild(name); li.appendChild(pts); li.appendChild(detail);
+      ol.appendChild(li);
+    });
   }
 
   function seg(id, onPick) {
@@ -427,6 +548,9 @@
         S.over = true; S.winCells = w; S.winProgress = reduceMotion ? 1 : 0;
         if (p === X) S.score.x++; else S.score.o++;
         recordResult(p === S.human ? "w" : "l");
+        if (S.mode === "ai" && p === S.human) {
+          recordLeaderboard(diffPoints(S.diff), "Cờ caro · thắng máy (" + diffLabel(S.diff) + ")");
+        }
         if (!reduceMotion) animateWin();
       } else if (boardFull()) {
         S.over = true; S.score.d++; recordResult("d");
@@ -926,6 +1050,7 @@
       list.sort(function (a, b) { return b.score - a.score; });
       Store.set(key(), list.slice(0, 8));
       if (score > best) { best = score; Store.set(bestKey(), best); }
+      recordLeaderboard(score, "2048 · bàn " + n + "×" + n + " · ô cao nhất " + maxTile());
       renderHS();
     }
 
